@@ -1,5 +1,8 @@
 .idea
+venv
+__pycache__
 server.db
 test.py
 port.info
 Debug.log
+show_db.py

@@ -6,7 +6,9 @@ import logging
 FORMAT = "%(filename)s: in line %(lineno)d\n%(message)s"
 logging.basicConfig(filename='Debug.log', filemode= "w", level=logging.DEBUG
                     , format= FORMAT)
-
+ID_POS = 0
+NAME_POS = 1
+PK_POS = 2
 #class for implementing the data base
 class MessageUDB:
     def __init__(self):
@@ -25,18 +27,18 @@ class MessageUDB:
                                  LastSeen TEXT);''')
 
             self.conn.execute('''CREATE TABLE messages
-                                 (ID TEXT PRIMARY KEY     NOT NULL,
+                                 (ID INTEGER PRIMARY KEY  AUTOINCREMENT,
                                  ToClient  TEXT        TEXT    NOT NULL,
                                  FromClient TEXT    NOT NULL,
                                  Type char(1),
                                  Content Blob);''')
         except:
-            logging.warning("Tables were already created")
             pass
+            logging.debug("error in creating tables")
             #Handle the situation of already existing table
 
 
-    def InsertMessage(self, ID, IDTO, IDFROM, Type, Content ):
+    def InsertMessage(self, IDTO, IDFROM, Type, Content ):
         """
         Inserting new Message into data base
 
@@ -48,9 +50,20 @@ class MessageUDB:
 
         try:
             #exectuting Insert
-            self.conn.execute("""Insert Into messages Values
-            (?,?,?,?,?)
-            """, [ID, IDTO, IDFROM, Type, Content])
+            self.conn.execute("""Insert Into messages(ToClient, FromClient, Type, Content) Values
+            (?,?,?,?)
+            """, [IDTO, IDFROM, Type, Content])
+            self.conn.commit()
+
+            cur = self.conn.cursor()
+
+            querry = """SELECT ID From messages
+                        WHERE ID >= (SELECT ID From messages)
+                        
+            """
+            cur.execute(querry)
+            return cur.fetchall()[0][0]
+
         except:
             #handeling error situation
             raise
@@ -68,13 +81,26 @@ class MessageUDB:
 
         try:
             # exectuting Insert
+            print("data base")
             self.conn.execute("""Insert Into clients Values
             (?,?,?,?)
             """, [ID, Name, PublicKey, LastSeen])
+            self.conn.commit()
+
         except:
             # handeling clone situation
             logging.error("ID already exists")
             raise
+
+    def getPublicKey(self, id):
+        cur = self.conn.cursor()
+
+        querry = f"SELECT * From clients"
+        cur.execute(querry)
+        for i in cur.fetchall():
+            if id == i[ID_POS]:
+                return i[PK_POS]
+        return b''
 
 
     def Exists(self, attr, value):
@@ -82,13 +108,56 @@ class MessageUDB:
         try:
             querry = f"SELECT {attr} From clients"
             cur.execute(querry)
-            return value in cur.fetchall()
+            print(value)
+            for i in cur.fetchall():
+                if value in i:
+                    return True
+            return False
         except:
             logging.debug("wrong attribute")
             return False
 
-    def DeleteMessage(self, ID):
-        self.conn.execute("Delete From messages Where Id = ?",[ID])
+    def getMsgByID(self,id):
+        cur = self.conn.cursor()
+
+
+        cur.execute("""SELECT * From messages
+                                WHERE ToClient >= ?
+
+                    """, [id])
+
+        return cur.fetchall()
 
 
 
+    def delMsgByID(self, ID):
+        self.conn.execute("Delete From messages Where ToClient = ?",[ID])
+        self.conn.commit()
+
+
+    def showClients(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * from clients")
+        print(cur.fetchall())
+
+    def showMessages(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * from messages")
+        print(cur.fetchall())
+
+    def retClients(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT ID, Name from clients")
+        return (cur.fetchall())
+
+    def retMessages(self):
+        cur = self.conn.cursor()
+        cur.execute("SELECT * from messages")
+        return (cur.fetchall())
+
+    def close(self):
+        self.conn.close()
+
+
+
+MessageUDB()
