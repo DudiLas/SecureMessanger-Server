@@ -83,8 +83,8 @@ class MessageUDB:
             # exectuting Insert
             print("data base")
             self.conn.execute("""Insert Into clients Values
-            (?,?,?,?)
-            """, [ID, Name, PublicKey, LastSeen])
+            (?,?,?,datetime('now'))
+            """, [ID, Name, PublicKey])
             self.conn.commit()
 
         except:
@@ -132,6 +132,11 @@ class MessageUDB:
 
     def delMsgByID(self, ID):
         self.conn.execute("Delete From messages Where ToClient = ?",[ID])
+        self.conn.commit()
+
+
+    def updateTime(self, ID):
+        self.conn.execute("Update clients Set LastSeen = datetime('now')  Where ID = ?",[ID])
         self.conn.commit()
 
 

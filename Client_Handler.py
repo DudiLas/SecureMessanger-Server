@@ -189,9 +189,10 @@ class Client:
         #critical
         mutex.acquire()
         db = MessageUDB()
+
         if not db.Exists("name", name):
             retID = uuidGen()
-            print(retID)
+            db.updateTime(retID)
             retMsg = SentMsg(VERSION, SUC_REGISTER, len(retID), retID)
 
             db.InsertClient(retID, name, publicKey)
@@ -211,6 +212,7 @@ class Client:
         mutex.acquire()
         logging.debug("start mutex section")
         db = MessageUDB()
+        db.updateTime(ms.id)
         clients = db.retClients()
         db.close()
         logging.debug("end mutex section")
@@ -232,6 +234,7 @@ class Client:
         # critical
         mutex.acquire()
         db = MessageUDB()
+        db.updateTime(ms.id)
         pKey = db.getPublicKey(id)
         db.close()
         # end critical
@@ -248,14 +251,16 @@ class Client:
         # critical
         mutex.acquire()
         db = MessageUDB()
+        db.updateTime(ms.id)
         msgID = db.InsertMessage(txtMsg.id, ms.id, txtMsg.type, txtMsg.msg)
         db.close()
         # end critical
         mutex.release()
         bitmsgID = msgID.to_bytes(MSG_ID_LEN, "little")
 
-        retMsg = SentMsg(VERSION, REC_MSG, len(txtMsg.msg + bitmsgID), txtMsg.msg + bitmsgID )
+        retMsg = SentMsg(VERSION, REC_MSG, len(txtMsg.id + bitmsgID), txtMsg.id + bitmsgID )
         self.sendMsg(retMsg)
+
 
     def pullMsgs(self,ms):
         clientID = ms.id
@@ -265,6 +270,7 @@ class Client:
         # critical
         mutex.acquire()
         db = MessageUDB()
+        db.updateTime(ms.id)
         msgList = db.getMsgByID(clientID)
         db.close()
         # end critical
